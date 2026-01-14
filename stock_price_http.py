@@ -1,4 +1,4 @@
-import uvicorn  sdfsdfsdfs
+import uvicorn
 from fastapi import FastAPI, Request
 from typing import Dict, Any
 import yfinance as yf
