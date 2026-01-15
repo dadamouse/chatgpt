@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>即時股價查詢</title>
+</head>
+<body>
+    <h1>即時股價查詢</h1>
+    <form id="stock-form">
+        <input type="text" id="symbol" placeholder="請輸入股票代號 (例如 2330.TW)">
+        <button type="submit">查詢</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('stock-form').addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const symbol = document.getElementById('symbol').value;
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '查詢中...';
+
+            try {
+                const response = await fetch(`/api/price/${symbol}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    resultDiv.innerHTML = data.error;
+                } else {
+                    resultDiv.innerHTML = `${data.symbol} 當前股價: ${data.price}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `查詢時發生錯誤: ${error}`;
+            }
+        });
+    </script>
+</body>
+</html>
