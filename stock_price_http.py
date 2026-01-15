@@ -1,9 +1,28 @@
 import uvicorn
 from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from typing import Dict, Any
 import yfinance as yf
 
 app = FastAPI()
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+async def read_index():
+    return FileResponse('static/index.html', media_type='text/html; charset=utf-8')
+
+@app.get("/api/price/{symbol}")
+async def get_price(symbol: str):
+    try:
+        ticker = yf.Ticker(symbol)
+        price = ticker.info.get("regularMarketPrice")
+        if price is None:
+            return {"error": f"找不到 {symbol} 的即時股價"}
+        return {"symbol": symbol, "price": price}
+    except Exception as e:
+        return {"error": f"查詢 {symbol} 時發生錯誤: {str(e)}"}
 
 @app.get("/.well-known/ai-plugin.json")
 async def manifest():
