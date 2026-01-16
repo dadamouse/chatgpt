@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>即時股價查詢</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 200px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>即時股價查詢</h1>
+        <input type="text" id="symbol" placeholder="請輸入股票代號 (例如 2330.TW)">
+        <button onclick="getStockPrice()">查詢</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function getStockPrice() {
+            const symbol = document.getElementById('symbol').value.trim();
+            const resultDiv = document.getElementById('result');
+
+            if (!symbol) {
+                resultDiv.innerText = '請輸入股票代號';
+                return;
+            }
+
+            resultDiv.innerText = '查詢中...';
+
+            try {
+                const response = await fetch('/api?symbol=' + encodeURIComponent(symbol));
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // 如果後端回傳錯誤訊息，則顯示出來
+                    resultDiv.innerText = data.detail || `發生錯誤，狀態碼：${response.status}`;
+                } else {
+                    resultDiv.innerText = `${data.symbol} 當前股價: ${data.price}`;
+                }
+            } catch (error) {
+                console.error('查詢時發生錯誤:', error);
+                resultDiv.innerText = '查詢失敗，請檢查網路連線或稍後再試。';
+            }
+        }
+    </script>
+</body>
+</html>
