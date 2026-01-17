@@ -1,2 +1,9 @@
-server.log
+# Logs
+*.log
+
+# Python cache
 __pycache__/
+
+# Test artifacts
+screenshot.png
+test_frontend.py
