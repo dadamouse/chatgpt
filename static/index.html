@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -18,72 +18,188 @@
             text-align: center;
             background: white;
             padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 450px;
         }
         h1 {
-            color: #333;
+            color: #1c1e21;
+            margin-bottom: 25px;
+        }
+        .search-box {
+            display: flex;
+            justify-content: center;
         }
         input[type="text"] {
-            padding: 10px;
-            width: 200px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+            padding: 12px;
+            width: 60%;
+            border: 1px solid #dddfe2;
+            border-radius: 6px;
             margin-right: 10px;
+            font-size: 16px;
         }
         button {
-            padding: 10px 20px;
+            padding: 12px 22px;
             border: none;
             background-color: #007bff;
             color: white;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
             transition: background-color 0.3s;
         }
         button:hover {
             background-color: #0056b3;
         }
         #result {
+            margin-top: 25px;
+            text-align: left;
+        }
+        .stock-card {
+            border: 1px solid #dddfe2;
+            border-radius: 8px;
+            padding: 20px;
+            display: none; /* Initially hidden */
+        }
+        .stock-card h2 {
+            margin-top: 0;
+            font-size: 1.8em;
+            color: #1c1e21;
+        }
+        .stock-card h2 span {
+            font-size: 0.7em;
+            color: #606770;
+            margin-left: 8px;
+        }
+        .price {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #007bff;
+            margin: 10px 0;
+        }
+        .details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            color: #606770;
+        }
+        .details div {
+            background-color: #f0f2f5;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .details span {
+            font-weight: bold;
+            color: #1c1e21;
+            display: block;
+        }
+        #status {
             margin-top: 20px;
-            font-size: 1.2em;
-            color: #333;
+            font-size: 1em;
+            color: #606770;
+        }
+        #last-updated {
+            font-size: 0.8em;
+            color: #90949c;
+            margin-top: 15px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>即時股價查詢</h1>
-        <input type="text" id="symbol" placeholder="請輸入股票代號 (例如 2330.TW)">
-        <button onclick="getStockPrice()">查詢</button>
-        <div id="result"></div>
+        <div class="search-box">
+            <input type="text" id="symbol" placeholder="請輸入股票代號 (例如 2330.TW)">
+            <button onclick="getStockPrice()">查詢</button>
+        </div>
+        <div id="status"></div>
+        <div id="result">
+            <div class="stock-card" id="stockCard">
+                <h2 id="stockName"></h2>
+                <div class="price" id="stockPrice"></div>
+                <div class="details">
+                    <div>最高價<span id="dayHigh"></span></div>
+                    <div>最低價<span id="dayLow"></span></div>
+                    <div style="grid-column: span 2;">成交量<span id="volume"></span></div>
+                </div>
+                <div id="last-updated"></div>
+            </div>
+        </div>
     </div>
 
     <script>
+        let updateInterval;
+
+        // Allow pressing Enter to search
+        document.getElementById('symbol').addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                getStockPrice();
+            }
+        });
+
         async function getStockPrice() {
             const symbol = document.getElementById('symbol').value.trim();
-            const resultDiv = document.getElementById('result');
+            const statusDiv = document.getElementById('status');
+            const stockCard = document.getElementById('stockCard');
+
+            // Clear previous interval if it exists
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
 
             if (!symbol) {
-                resultDiv.innerText = '請輸入股票代號';
+                statusDiv.innerText = '請輸入股票代號';
+                stockCard.style.display = 'none';
                 return;
             }
 
-            resultDiv.innerText = '查詢中...';
+            statusDiv.innerText = `查詢 ${symbol} 中...`;
+            stockCard.style.display = 'none';
+
+            await fetchData(symbol);
+
+            // Start auto-updating every 30 seconds
+            updateInterval = setInterval(() => fetchData(symbol), 30000);
+        }
+
+        async function fetchData(symbol) {
+            const statusDiv = document.getElementById('status');
+            const stockCard = document.getElementById('stockCard');
 
             try {
                 const response = await fetch('/api?symbol=' + encodeURIComponent(symbol));
                 const data = await response.json();
 
                 if (!response.ok) {
-                    // 如果後端回傳錯誤訊息，則顯示出來
-                    resultDiv.innerText = data.detail || `發生錯誤，狀態碼：${response.status}`;
+                    statusDiv.innerText = data.detail || `發生錯誤，狀態碼：${response.status}`;
+                    stockCard.style.display = 'none';
+                    if (updateInterval) clearInterval(updateInterval); // Stop timer on error
                 } else {
-                    resultDiv.innerText = `${data.symbol} 當前股價: ${data.price}`;
+                    updateUI(data);
+                    statusDiv.innerText = ''; // Clear status message
                 }
             } catch (error) {
                 console.error('查詢時發生錯誤:', error);
-                resultDiv.innerText = '查詢失敗，請檢查網路連線或稍後再試。';
+                statusDiv.innerText = '查詢失敗，請檢查網路連線或稍後再試。';
+                stockCard.style.display = 'none';
+                if (updateInterval) clearInterval(updateInterval); // Stop timer on error
             }
+        }
+
+        function updateUI(data) {
+            const stockCard = document.getElementById('stockCard');
+            document.getElementById('stockName').innerHTML = `${data.shortName || 'N/A'} <span>${data.symbol}</span>`;
+            document.getElementById('stockPrice').innerText = data.price ? data.price.toLocaleString() : 'N/A';
+            document.getElementById('dayHigh').innerText = data.dayHigh ? data.dayHigh.toLocaleString() : 'N/A';
+            document.getElementById('dayLow').innerText = data.dayLow ? data.dayLow.toLocaleString() : 'N/A';
+            document.getElementById('volume').innerText = data.volume ? data.volume.toLocaleString() : 'N/A';
+
+            const now = new Date();
+            document.getElementById('last-updated').innerText = `最後更新: ${now.toLocaleTimeString()}`;
+
+            stockCard.style.display = 'block';
         }
     </script>
 </body>
