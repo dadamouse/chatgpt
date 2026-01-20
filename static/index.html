@@ -78,7 +78,7 @@
                     // 如果後端回傳錯誤訊息，則顯示出來
                     resultDiv.innerText = data.detail || `發生錯誤，狀態碼：${response.status}`;
                 } else {
-                    resultDiv.innerText = `${data.symbol} 當前股價: ${data.price}`;
+                    resultDiv.innerText = `${data.symbol} 當前股價: ${data.price.toFixed(2)}`;
                 }
             } catch (error) {
                 console.error('查詢時發生錯誤:', error);

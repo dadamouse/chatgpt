@@ -24,9 +24,12 @@ async def get_stock_price(symbol: str):
         raise HTTPException(status_code=400, detail="請提供股票代號")
     try:
         ticker = yf.Ticker(symbol)
-        price = ticker.info.get("regularMarketPrice")
-        if price is None:
-            raise HTTPException(status_code=404, detail=f"找不到 {symbol} 的即時股價")
+        # 使用 history 來取得最新的收盤價，比 .info 更可靠
+        hist = ticker.history(period="1d")
+        if hist.empty:
+            raise HTTPException(status_code=404, detail=f"找不到 {symbol} 的股價資訊")
+
+        price = hist['Close'].iloc[-1]
 
         return {"symbol": symbol, "price": price}
     except Exception as e:
