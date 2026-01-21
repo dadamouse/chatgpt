@@ -59,9 +59,12 @@
     </div>
 
     <script>
+        const symbolInput = document.getElementById('symbol');
+        const resultDiv = document.getElementById('result');
+        const queryButton = document.querySelector('button');
+
         async function getStockPrice() {
-            const symbol = document.getElementById('symbol').value.trim();
-            const resultDiv = document.getElementById('result');
+            const symbol = symbolInput.value.trim();
 
             if (!symbol) {
                 resultDiv.innerText = '請輸入股票代號';
@@ -69,13 +72,14 @@
             }
 
             resultDiv.innerText = '查詢中...';
+            queryButton.disabled = true;
+            symbolInput.disabled = true;
 
             try {
                 const response = await fetch('/api?symbol=' + encodeURIComponent(symbol));
                 const data = await response.json();
 
                 if (!response.ok) {
-                    // 如果後端回傳錯誤訊息，則顯示出來
                     resultDiv.innerText = data.detail || `發生錯誤，狀態碼：${response.status}`;
                 } else {
                     resultDiv.innerText = `${data.symbol} 當前股價: ${data.price}`;
@@ -83,8 +87,17 @@
             } catch (error) {
                 console.error('查詢時發生錯誤:', error);
                 resultDiv.innerText = '查詢失敗，請檢查網路連線或稍後再試。';
+            } finally {
+                queryButton.disabled = false;
+                symbolInput.disabled = false;
             }
         }
+
+        symbolInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                getStockPrice();
+            }
+        });
     </script>
 </body>
 </html>
