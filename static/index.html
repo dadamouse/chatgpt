@@ -48,6 +48,13 @@
             font-size: 1.2em;
             color: #333;
         }
+        .error {
+            color: red;
+        }
+        .stock-info {
+            list-style-type: none;
+            padding: 0;
+        }
     </style>
 </head>
 <body>
@@ -59,16 +66,23 @@
     </div>
 
     <script>
+        // 增加事件監聽，讓 Enter 鍵也能觸發查詢
+        document.getElementById('symbol').addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                getStockPrice();
+            }
+        });
+
         async function getStockPrice() {
             const symbol = document.getElementById('symbol').value.trim();
             const resultDiv = document.getElementById('result');
 
             if (!symbol) {
-                resultDiv.innerText = '請輸入股票代號';
+                resultDiv.innerHTML = '<p class="error">請輸入股票代號</p>';
                 return;
             }
 
-            resultDiv.innerText = '查詢中...';
+            resultDiv.innerHTML = '<p>查詢中...</p>';
 
             try {
                 const response = await fetch('/api?symbol=' + encodeURIComponent(symbol));
@@ -76,13 +90,22 @@
 
                 if (!response.ok) {
                     // 如果後端回傳錯誤訊息，則顯示出來
-                    resultDiv.innerText = data.detail || `發生錯誤，狀態碼：${response.status}`;
+                    resultDiv.innerHTML = `<p class="error">${data.detail || `發生錯誤，狀態碼：${response.status}`}</p>`;
                 } else {
-                    resultDiv.innerText = `${data.symbol} 當前股價: ${data.price}`;
+                    // 使用更豐富的 HTML 結構來呈現結果
+                    resultDiv.innerHTML = `
+                        <h2>${data.company_name} (${data.symbol})</h2>
+                        <ul class="stock-info">
+                            <li><strong>當前股價:</strong> ${data.price}</li>
+                            <li><strong>今日最高:</strong> ${data.day_high}</li>
+                            <li><strong>今日最低:</strong> ${data.day_low}</li>
+                            <li><strong>昨日收盤:</strong> ${data.previous_close}</li>
+                        </ul>
+                    `;
                 }
             } catch (error) {
                 console.error('查詢時發生錯誤:', error);
-                resultDiv.innerText = '查詢失敗，請檢查網路連線或稍後再試。';
+                resultDiv.innerHTML = '<p class="error">查詢失敗，請檢查網路連線或稍後再試。</p>';
             }
         }
     </script>
