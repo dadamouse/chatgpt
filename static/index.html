@@ -48,6 +48,20 @@
             font-size: 1.2em;
             color: #333;
         }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto 0;
+            display: none; /* 預設隱藏 */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -55,6 +69,7 @@
         <h1>即時股價查詢</h1>
         <input type="text" id="symbol" placeholder="請輸入股票代號 (例如 2330.TW)">
         <button onclick="getStockPrice()">查詢</button>
+        <div id="loader" class="loader"></div>
         <div id="result"></div>
     </div>
 
@@ -62,13 +77,15 @@
         async function getStockPrice() {
             const symbol = document.getElementById('symbol').value.trim();
             const resultDiv = document.getElementById('result');
+            const loader = document.getElementById('loader');
 
             if (!symbol) {
                 resultDiv.innerText = '請輸入股票代號';
                 return;
             }
 
-            resultDiv.innerText = '查詢中...';
+            resultDiv.innerText = '';
+            loader.style.display = 'block';
 
             try {
                 const response = await fetch('/api?symbol=' + encodeURIComponent(symbol));
@@ -83,6 +100,8 @@
             } catch (error) {
                 console.error('查詢時發生錯誤:', error);
                 resultDiv.innerText = '查詢失敗，請檢查網路連線或稍後再試。';
+            } finally {
+                loader.style.display = 'none';
             }
         }
     </script>
