@@ -19,7 +19,7 @@ async def read_index():
     return FileResponse('static/index.html')
 
 @app.get("/api")
-async def get_stock_price(symbol: str):
+def get_stock_price(symbol: str):
     if not symbol:
         raise HTTPException(status_code=400, detail="請提供股票代號")
     try:
@@ -27,9 +27,19 @@ async def get_stock_price(symbol: str):
         hist = ticker.history(period="1d")
         if hist.empty:
             raise HTTPException(status_code=404, detail=f"找不到 {symbol} 的股價資訊")
-        price = hist['Close'].iloc[-1]
 
-        return {"symbol": symbol, "price": float(price)}
+        price = float(hist['Close'].iloc[-1])
+        info = ticker.info
+
+        name = info.get('longName') or info.get('shortName') or symbol
+        currency = info.get('currency', '')
+
+        return {
+            "symbol": symbol.upper(),
+            "name": name,
+            "price": price,
+            "currency": currency
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"查詢 {symbol} 時發生錯誤: {str(e)}")
 
