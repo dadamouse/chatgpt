@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: "Microsoft JhengHei", Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -18,73 +18,111 @@
             text-align: center;
             background: white;
             padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 400px;
         }
         h1 {
-            color: #333;
+            color: #1a73e8;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            display: flex;
+            margin-bottom: 20px;
         }
         input[type="text"] {
-            padding: 10px;
-            width: 200px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            margin-right: 10px;
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px 0 0 8px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus {
+            border-color: #1a73e8;
         }
         button {
-            padding: 10px 20px;
+            padding: 12px 24px;
             border: none;
-            background-color: #007bff;
+            background-color: #1a73e8;
             color: white;
-            border-radius: 5px;
+            border-radius: 0 8px 8px 0;
             cursor: pointer;
+            font-weight: bold;
             transition: background-color 0.3s;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: #1557b0;
         }
         #result {
-            margin-top: 20px;
+            margin-top: 25px;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        .price-info {
+            font-size: 2em;
+            font-weight: bold;
+            color: #202124;
+        }
+        .change-info {
             font-size: 1.2em;
-            color: #333;
+            font-weight: 500;
+        }
+        .up {
+            color: #ea4335; /* 台灣習慣：紅漲 */
+        }
+        .down {
+            color: #34a853; /* 台灣習慣：綠跌 */
         }
         .loader {
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #007bff;
+            border-top: 4px solid #1a73e8;
             border-radius: 50%;
             width: 30px;
             height: 30px;
             animation: spin 1s linear infinite;
             margin: 20px auto 0;
-            display: none; /* 預設隱藏 */
+            display: none;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .error {
+            color: #d93025;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>即時股價查詢</h1>
-        <input type="text" id="symbol" placeholder="請輸入股票代號 (例如 2330.TW 或 AAPL)">
-        <button onclick="getStockPrice()">查詢</button>
+        <h1>股價即時查詢</h1>
+        <div class="input-group">
+            <input type="text" id="symbol" placeholder="代號，如 2330.TW" onkeypress="if(event.key==='Enter') getStockPrice()">
+            <button onclick="getStockPrice()">查詢</button>
+        </div>
         <div id="loader" class="loader"></div>
         <div id="result"></div>
     </div>
 
     <script>
         async function getStockPrice() {
-            const symbol = document.getElementById('symbol').value.trim();
+            const symbolInput = document.getElementById('symbol');
+            const symbol = symbolInput.value.trim();
             const resultDiv = document.getElementById('result');
             const loader = document.getElementById('loader');
 
             if (!symbol) {
-                resultDiv.innerText = '請輸入股票代號';
+                resultDiv.innerHTML = '<div class="error">請輸入股票代號</div>';
                 return;
             }
 
-            resultDiv.innerText = '';
+            resultDiv.innerHTML = '';
             loader.style.display = 'block';
 
             try {
@@ -92,14 +130,40 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    // 如果後端回傳錯誤訊息，則顯示出來
-                    resultDiv.innerText = data.detail || `發生錯誤，狀態碼：${response.status}`;
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'error';
+                    errorDiv.textContent = data.detail || `發生錯誤 (${response.status})`;
+                    resultDiv.appendChild(errorDiv);
                 } else {
-                    resultDiv.innerText = `${data.symbol} 當前股價: ${data.price}`;
+                    const symbolLabel = document.createElement('div');
+                    symbolLabel.style.color = '#5f6368';
+                    symbolLabel.textContent = data.symbol;
+
+                    const priceInfo = document.createElement('div');
+                    priceInfo.className = 'price-info';
+                    priceInfo.textContent = `${data.price} ${data.currency}`;
+
+                    const changeInfo = document.createElement('div');
+                    changeInfo.className = 'change-info';
+                    const sign = data.change > 0 ? '+' : '';
+                    changeInfo.textContent = `${sign}${data.change} (${sign}${data.change_percent}%)`;
+
+                    if (data.change > 0) {
+                        changeInfo.classList.add('up');
+                    } else if (data.change < 0) {
+                        changeInfo.classList.add('down');
+                    }
+
+                    resultDiv.appendChild(symbolLabel);
+                    resultDiv.appendChild(priceInfo);
+                    resultDiv.appendChild(changeInfo);
                 }
             } catch (error) {
                 console.error('查詢時發生錯誤:', error);
-                resultDiv.innerText = '查詢失敗，請檢查網路連線或稍後再試。';
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = '查詢失敗，請稍後再試。';
+                resultDiv.appendChild(errorDiv);
             } finally {
                 loader.style.display = 'none';
             }
