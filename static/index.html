@@ -47,6 +47,42 @@
             margin-top: 20px;
             font-size: 1.2em;
             color: #333;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #fafafa;
+            display: none;
+            min-height: 100px;
+        }
+        .stock-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .stock-symbol {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #666;
+        }
+        .stock-price {
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+        .stock-change {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .up {
+            color: #ff4d4d; /* 台灣股市：漲為紅 */
+        }
+        .down {
+            color: #2ecc71; /* 台灣股市：跌為綠 */
+        }
+        .no-change {
+            color: #333;
+        }
+        .error-message {
+            color: #ff4d4d;
+            font-weight: bold;
         }
         .loader {
             border: 4px solid #f3f3f3;
@@ -75,35 +111,86 @@
 
     <script>
         async function getStockPrice() {
-            const symbol = document.getElementById('symbol').value.trim();
+            const symbolInput = document.getElementById('symbol');
+            const symbol = symbolInput.value.trim();
             const resultDiv = document.getElementById('result');
             const loader = document.getElementById('loader');
 
             if (!symbol) {
-                resultDiv.innerText = '請輸入股票代號';
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = '請輸入股票代號';
+                resultDiv.className = 'error-message';
                 return;
             }
 
-            resultDiv.innerText = '';
+            // 清除之前的結果與狀態
+            resultDiv.style.display = 'none';
+            resultDiv.textContent = '';
+            resultDiv.className = '';
             loader.style.display = 'block';
 
             try {
                 const response = await fetch('/api?symbol=' + encodeURIComponent(symbol));
                 const data = await response.json();
 
+                resultDiv.style.display = 'block';
+                // 清除所有子節點
+                while (resultDiv.firstChild) {
+                    resultDiv.removeChild(resultDiv.firstChild);
+                }
+
                 if (!response.ok) {
-                    // 如果後端回傳錯誤訊息，則顯示出來
-                    resultDiv.innerText = data.detail || `發生錯誤，狀態碼：${response.status}`;
+                    resultDiv.textContent = data.detail || `發生錯誤，狀態碼：${response.status}`;
+                    resultDiv.classList.add('error-message');
                 } else {
-                    resultDiv.innerText = `${data.symbol} 當前股價: ${data.price}`;
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'stock-info';
+
+                    const resSymbol = document.createElement('div');
+                    resSymbol.className = 'stock-symbol';
+                    resSymbol.textContent = data.symbol;
+
+                    const resPrice = document.createElement('div');
+                    resPrice.className = 'stock-price';
+                    resPrice.textContent = data.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                    const resChange = document.createElement('div');
+                    resChange.className = 'stock-change';
+                    const changePrefix = data.change > 0 ? '▲' : (data.change < 0 ? '▼' : '');
+                    resChange.textContent = `${changePrefix} ${Math.abs(data.change).toFixed(2)} (${data.percent_change.toFixed(2)}%)`;
+
+                    if (data.change > 0) {
+                        resPrice.classList.add('up');
+                        resChange.classList.add('up');
+                    } else if (data.change < 0) {
+                        resPrice.classList.add('down');
+                        resChange.classList.add('down');
+                    } else {
+                        resPrice.classList.add('no-change');
+                        resChange.classList.add('no-change');
+                    }
+
+                    infoDiv.appendChild(resSymbol);
+                    infoDiv.appendChild(resPrice);
+                    infoDiv.appendChild(resChange);
+                    resultDiv.appendChild(infoDiv);
                 }
             } catch (error) {
                 console.error('查詢時發生錯誤:', error);
-                resultDiv.innerText = '查詢失敗，請檢查網路連線或稍後再試。';
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = '查詢失敗，請檢查網路連線或稍後再試。';
+                resultDiv.classList.add('error-message');
             } finally {
                 loader.style.display = 'none';
             }
         }
+
+        // 支援 Enter 鍵查詢
+        document.getElementById('symbol').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                getStockPrice();
+            }
+        });
     </script>
 </body>
 </html>
