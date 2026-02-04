@@ -29,8 +29,13 @@ def get_stock_price(symbol: str):
         if hist.empty:
             raise HTTPException(status_code=404, detail=f"找不到 {symbol} 的股價資訊")
 
-        # 取得最新價格
-        price = float(hist['Close'].iloc[-1])
+        # 取得最新價格及相關資訊
+        latest_data = hist.iloc[-1]
+        price = float(latest_data['Close'])
+        open_price = float(latest_data['Open'])
+        high_price = float(latest_data['High'])
+        low_price = float(latest_data['Low'])
+        volume = int(latest_data['Volume'])
 
         # 計算漲跌
         if len(hist) > 1:
@@ -45,7 +50,11 @@ def get_stock_price(symbol: str):
             "symbol": symbol,
             "price": round(price, 2),
             "change": round(change, 2),
-            "percent_change": round(percent_change, 2)
+            "percent_change": round(percent_change, 2),
+            "open": round(open_price, 2),
+            "high": round(high_price, 2),
+            "low": round(low_price, 2),
+            "volume": volume
         }
     except HTTPException as e:
         # 重新拋出 HTTPException 以避免被後面的 Exception 捕捉並轉為 500
