@@ -89,6 +89,61 @@
         .no-change {
             color: #333;
         }
+        .stock-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .info-item {
+            text-align: left;
+        }
+        .info-label {
+            font-size: 0.9em;
+            color: #5f6368;
+        }
+        .info-value {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .update-time {
+            font-size: 0.8em;
+            color: #999;
+            margin-top: 15px;
+        }
+        .quick-search {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .quick-btn {
+            padding: 6px 12px;
+            border: 1px solid #1a73e8;
+            background: white;
+            color: #1a73e8;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        .quick-btn:hover {
+            background: #1a73e8;
+            color: white;
+        }
+        .auto-refresh-container {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #5f6368;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #1a73e8;
@@ -123,6 +178,16 @@
             <input type="text" id="symbol" placeholder="輸入代號 (如 2330.TW)" onkeydown="if(event.key==='Enter') getStockPrice()">
             <button onclick="getStockPrice()">查詢</button>
         </div>
+        <div class="quick-search">
+            <button class="quick-btn" onclick="quickSearch('2330.TW')">台積電</button>
+            <button class="quick-btn" onclick="quickSearch('2317.TW')">鴻海</button>
+            <button class="quick-btn" onclick="quickSearch('^TWII')">加權指數</button>
+            <button class="quick-btn" onclick="quickSearch('AAPL')">Apple</button>
+        </div>
+        <div class="auto-refresh-container">
+            <input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()">
+            <label for="auto-refresh">自動刷新 (30秒)</label>
+        </div>
         <div id="loader" class="loader"></div>
         <div id="result">
             <div style="color: #5f6368;">請輸入股票代號並點擊查詢</div>
@@ -130,6 +195,30 @@
     </div>
 
     <script>
+        let refreshInterval = null;
+
+        function toggleAutoRefresh() {
+            const isEnabled = document.getElementById('auto-refresh').checked;
+            if (isEnabled) {
+                refreshInterval = setInterval(() => {
+                    const symbol = document.getElementById('symbol').value.trim();
+                    if (symbol) {
+                        getStockPrice();
+                    }
+                }, 30000);
+            } else {
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                }
+            }
+        }
+
+        function quickSearch(symbol) {
+            document.getElementById('symbol').value = symbol;
+            getStockPrice();
+        }
+
         async function getStockPrice() {
             const symbolInput = document.getElementById('symbol');
             const symbol = symbolInput.value.trim().toUpperCase();
@@ -179,9 +268,37 @@
                         changeEl.classList.add('no-change');
                     }
 
+                    const infoGrid = document.createElement('div');
+                    infoGrid.className = 'stock-info-grid';
+
+                    const createInfoItem = (label, value) => {
+                        const item = document.createElement('div');
+                        item.className = 'info-item';
+                        const labelEl = document.createElement('div');
+                        labelEl.className = 'info-label';
+                        labelEl.textContent = label;
+                        const valueEl = document.createElement('div');
+                        valueEl.className = 'info-value';
+                        valueEl.textContent = value;
+                        item.appendChild(labelEl);
+                        item.appendChild(valueEl);
+                        return item;
+                    };
+
+                    infoGrid.appendChild(createInfoItem('開盤', data.open));
+                    infoGrid.appendChild(createInfoItem('最高', data.high));
+                    infoGrid.appendChild(createInfoItem('最低', data.low));
+                    infoGrid.appendChild(createInfoItem('成交量', data.volume.toLocaleString()));
+
+                    const timeEl = document.createElement('div');
+                    timeEl.className = 'update-time';
+                    timeEl.textContent = '最後更新: ' + new Date().toLocaleTimeString();
+
                     resultDiv.appendChild(symbolEl);
                     resultDiv.appendChild(priceEl);
                     resultDiv.appendChild(changeEl);
+                    resultDiv.appendChild(infoGrid);
+                    resultDiv.appendChild(timeEl);
                 }
             } catch (error) {
                 console.error('查詢時發生錯誤:', error);
