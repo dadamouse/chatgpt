@@ -41,11 +41,22 @@ def get_stock_price(symbol: str):
             change = 0.0
             percent_change = 0.0
 
+        latest = hist.iloc[-1]
+
+        def safe_format(val, is_int=False):
+            if isinstance(val, (int, float)) and not (isinstance(val, float) and val != val):
+                return int(val) if is_int else round(float(val), 2)
+            return None
+
         return {
             "symbol": symbol,
-            "price": round(price, 2),
-            "change": round(change, 2),
-            "percent_change": round(percent_change, 2)
+            "price": safe_format(price),
+            "change": safe_format(change),
+            "percent_change": safe_format(percent_change),
+            "open": safe_format(latest.get('Open')),
+            "high": safe_format(latest.get('High')),
+            "low": safe_format(latest.get('Low')),
+            "volume": safe_format(latest.get('Volume'), is_int=True)
         }
     except HTTPException as e:
         # 重新拋出 HTTPException 以避免被後面的 Exception 捕捉並轉為 500

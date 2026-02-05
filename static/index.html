@@ -21,16 +21,37 @@
             border-radius: 12px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.1);
             width: 90%;
-            max-width: 500px;
+            max-width: 550px;
         }
         h1 {
             color: #1a73e8;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
+        }
+        .quick-search {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .quick-search button {
+            padding: 8px 16px;
+            background-color: #e8f0fe;
+            color: #1a73e8;
+            border: 1px solid transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+        .quick-search button:hover {
+            background-color: #d2e3fc;
+            border-color: #1a73e8;
         }
         .search-box {
             display: flex;
             justify-content: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         input[type="text"] {
             padding: 12px;
@@ -43,7 +64,7 @@
         input[type="text"]:focus {
             border-color: #1a73e8;
         }
-        button {
+        .search-btn {
             padding: 12px 24px;
             border: none;
             background-color: #1a73e8;
@@ -53,15 +74,27 @@
             font-weight: bold;
             transition: background-color 0.3s;
         }
-        button:hover {
+        .search-btn:hover {
             background-color: #1557b0;
         }
+        .auto-refresh {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            color: #5f6368;
+        }
+        .auto-refresh input {
+            margin-right: 8px;
+            cursor: pointer;
+        }
         #result {
-            margin-top: 30px;
+            margin-top: 10px;
             padding: 20px;
             border-radius: 8px;
             background-color: #f8f9fa;
-            min-height: 100px;
+            min-height: 150px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -70,15 +103,16 @@
         .stock-symbol {
             font-size: 1.2em;
             color: #5f6368;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .stock-price {
-            font-size: 2.5em;
+            font-size: 3em;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .stock-change {
-            font-size: 1.2em;
+            font-size: 1.3em;
+            margin-bottom: 20px;
         }
         .up {
             color: #ff4d4d; /* 台灣股市：漲為紅 */
@@ -88,6 +122,36 @@
         }
         .no-change {
             color: #333;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 100%;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 20px;
+        }
+        .metric-item {
+            text-align: left;
+            padding: 12px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .metric-label {
+            font-size: 0.85em;
+            color: #80868b;
+            margin-bottom: 4px;
+        }
+        .metric-value {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #3c4043;
+        }
+        .last-updated {
+            font-size: 0.8em;
+            color: #9aa0a6;
+            margin-top: 15px;
         }
         .loader {
             border: 4px solid #f3f3f3;
@@ -108,10 +172,13 @@
                 padding: 20px;
             }
             .stock-price {
-                font-size: 2em;
+                font-size: 2.2em;
             }
             input[type="text"] {
                 width: 50%;
+            }
+            .metrics-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -119,17 +186,56 @@
 <body>
     <div class="container">
         <h1>即時股價查詢</h1>
+
+        <div class="quick-search">
+            <button onclick="quickSearch('2330.TW')">台積電</button>
+            <button onclick="quickSearch('2454.TW')">聯發科</button>
+            <button onclick="quickSearch('AAPL')">Apple</button>
+            <button onclick="quickSearch('NVDA')">NVIDIA</button>
+            <button onclick="quickSearch('TSLA')">Tesla</button>
+        </div>
+
         <div class="search-box">
             <input type="text" id="symbol" placeholder="輸入代號 (如 2330.TW)" onkeydown="if(event.key==='Enter') getStockPrice()">
-            <button onclick="getStockPrice()">查詢</button>
+            <button class="search-btn" onclick="getStockPrice()">查詢</button>
         </div>
+
+        <div class="auto-refresh">
+            <input type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
+            <label for="autoRefresh">每 30 秒自動更新</label>
+        </div>
+
         <div id="loader" class="loader"></div>
+
         <div id="result">
             <div style="color: #5f6368;">請輸入股票代號並點擊查詢</div>
         </div>
     </div>
 
     <script>
+        let refreshInterval = null;
+        let lastSymbol = '';
+
+        function quickSearch(symbol) {
+            document.getElementById('symbol').value = symbol;
+            getStockPrice();
+        }
+
+        function toggleAutoRefresh() {
+            const isChecked = document.getElementById('autoRefresh').checked;
+            if (isChecked) {
+                if (!lastSymbol) {
+                    alert('請先查詢股票後再開啟自動更新');
+                    document.getElementById('autoRefresh').checked = false;
+                    return;
+                }
+                refreshInterval = setInterval(getStockPrice, 30000);
+            } else {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+
         async function getStockPrice() {
             const symbolInput = document.getElementById('symbol');
             const symbol = symbolInput.value.trim().toUpperCase();
@@ -141,54 +247,120 @@
                 return;
             }
 
-            resultDiv.textContent = '';
-            loader.style.display = 'block';
+            lastSymbol = symbol;
+            // 只有在非自動更新的情況下顯示載入動畫
+            if (!refreshInterval) {
+                resultDiv.style.opacity = '0.5';
+                loader.style.display = 'block';
+            }
 
             try {
                 const response = await fetch('/api?symbol=' + encodeURIComponent(symbol));
                 const data = await response.json();
 
                 if (!response.ok) {
+                    resultDiv.innerHTML = '';
                     const errorMsg = document.createElement('div');
                     errorMsg.textContent = data.detail || `發生錯誤，狀態碼：${response.status}`;
                     resultDiv.appendChild(errorMsg);
-                } else {
-                    const symbolEl = document.createElement('div');
-                    symbolEl.className = 'stock-symbol';
-                    symbolEl.textContent = data.symbol;
-
-                    const priceEl = document.createElement('div');
-                    priceEl.className = 'stock-price';
-                    priceEl.textContent = data.price.toLocaleString();
-
-                    const changeEl = document.createElement('div');
-                    changeEl.className = 'stock-change';
-                    const sign = data.change > 0 ? '+' : '';
-                    changeEl.textContent = `${sign}${data.change} (${sign}${data.percent_change}%)`;
-
-                    if (data.change > 0) {
-                        priceEl.classList.add('up');
-                        changeEl.classList.add('up');
-                        changeEl.textContent = '▲ ' + changeEl.textContent;
-                    } else if (data.change < 0) {
-                        priceEl.classList.add('down');
-                        changeEl.classList.add('down');
-                        changeEl.textContent = '▼ ' + changeEl.textContent;
-                    } else {
-                        priceEl.classList.add('no-change');
-                        changeEl.classList.add('no-change');
+                    // 發生錯誤時停止自動更新
+                    if (refreshInterval) {
+                        document.getElementById('autoRefresh').checked = false;
+                        toggleAutoRefresh();
                     }
-
-                    resultDiv.appendChild(symbolEl);
-                    resultDiv.appendChild(priceEl);
-                    resultDiv.appendChild(changeEl);
+                } else {
+                    displayResult(data);
                 }
             } catch (error) {
                 console.error('查詢時發生錯誤:', error);
                 resultDiv.textContent = '查詢失敗，請檢查網路連線或稍後再試。';
+                if (refreshInterval) {
+                    document.getElementById('autoRefresh').checked = false;
+                    toggleAutoRefresh();
+                }
             } finally {
                 loader.style.display = 'none';
+                resultDiv.style.opacity = '1';
             }
+        }
+
+        function displayResult(data) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = ''; // 清空結果
+
+            const symbolEl = document.createElement('div');
+            symbolEl.className = 'stock-symbol';
+            symbolEl.textContent = data.symbol;
+
+            const priceEl = document.createElement('div');
+            priceEl.className = 'stock-price';
+            priceEl.textContent = data.price !== null ? data.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '--';
+
+            const changeEl = document.createElement('div');
+            changeEl.className = 'stock-change';
+
+            if (data.change !== null && data.percent_change !== null) {
+                const sign = data.change > 0 ? '+' : '';
+                changeEl.textContent = `${sign}${data.change.toFixed(2)} (${sign}${data.percent_change.toFixed(2)}%)`;
+
+                if (data.change > 0) {
+                    priceEl.classList.add('up');
+                    changeEl.classList.add('up');
+                    changeEl.textContent = '▲ ' + changeEl.textContent;
+                } else if (data.change < 0) {
+                    priceEl.classList.add('down');
+                    changeEl.classList.add('down');
+                    changeEl.textContent = '▼ ' + changeEl.textContent;
+                } else {
+                    priceEl.classList.add('no-change');
+                    changeEl.classList.add('no-change');
+                }
+            } else {
+                changeEl.textContent = '0.00 (0.00%)';
+            }
+
+            // 建立指標網格
+            const metricsGrid = document.createElement('div');
+            metricsGrid.className = 'metrics-grid';
+
+            const metrics = [
+                { label: '開盤', value: data.open },
+                { label: '最高', value: data.high },
+                { label: '最低', value: data.low },
+                { label: '成交量', value: data.volume, isInt: true }
+            ];
+
+            metrics.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'metric-item';
+
+                const label = document.createElement('div');
+                label.className = 'metric-label';
+                label.textContent = m.label;
+
+                const value = document.createElement('div');
+                value.className = 'metric-value';
+                if (m.value !== null) {
+                    value.textContent = m.isInt ? m.value.toLocaleString() : m.value.toLocaleString(undefined, {minimumFractionDigits: 2});
+                } else {
+                    value.textContent = '--';
+                }
+
+                item.appendChild(label);
+                item.appendChild(value);
+                metricsGrid.appendChild(item);
+            });
+
+            const timestampEl = document.createElement('div');
+            timestampEl.className = 'last-updated';
+            const now = new Date();
+            timestampEl.textContent = '最後更新時間：' + now.toLocaleTimeString();
+
+            resultDiv.appendChild(symbolEl);
+            resultDiv.appendChild(priceEl);
+            resultDiv.appendChild(changeEl);
+            resultDiv.appendChild(metricsGrid);
+            resultDiv.appendChild(timestampEl);
         }
     </script>
 </body>
