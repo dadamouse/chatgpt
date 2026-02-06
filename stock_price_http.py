@@ -29,14 +29,29 @@ def get_stock_price(symbol: str):
         if hist.empty:
             raise HTTPException(status_code=404, detail=f"找不到 {symbol} 的股價資訊")
 
-        # 取得最新價格
-        price = float(hist['Close'].iloc[-1])
+        # 取得最新資料行
+        latest = hist.iloc[-1]
+
+        def safe_float(val):
+            if isinstance(val, (int, float)) and val == val:  # check for NaN
+                return float(val)
+            return 0.0
+
+        price = safe_float(latest.get('Close', 0))
+        open_val = safe_float(latest.get('Open', 0))
+        high_val = safe_float(latest.get('High', 0))
+        low_val = safe_float(latest.get('Low', 0))
+        volume_val = int(latest.get('Volume', 0))
 
         # 計算漲跌
         if len(hist) > 1:
-            prev_price = float(hist['Close'].iloc[-2])
-            change = price - prev_price
-            percent_change = (change / prev_price) * 100
+            prev_price = safe_float(hist['Close'].iloc[-2])
+            if prev_price != 0:
+                change = price - prev_price
+                percent_change = (change / prev_price) * 100
+            else:
+                change = 0.0
+                percent_change = 0.0
         else:
             change = 0.0
             percent_change = 0.0
@@ -45,7 +60,11 @@ def get_stock_price(symbol: str):
             "symbol": symbol,
             "price": round(price, 2),
             "change": round(change, 2),
-            "percent_change": round(percent_change, 2)
+            "percent_change": round(percent_change, 2),
+            "open": round(open_val, 2),
+            "high": round(high_val, 2),
+            "low": round(low_val, 2),
+            "volume": volume_val
         }
     except HTTPException as e:
         # 重新拋出 HTTPException 以避免被後面的 Exception 捕捉並轉為 500

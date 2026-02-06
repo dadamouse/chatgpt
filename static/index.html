@@ -25,12 +25,12 @@
         }
         h1 {
             color: #1a73e8;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
         .search-box {
             display: flex;
             justify-content: center;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         input[type="text"] {
             padding: 12px;
@@ -43,7 +43,7 @@
         input[type="text"]:focus {
             border-color: #1a73e8;
         }
-        button {
+        button.search-btn {
             padding: 12px 24px;
             border: none;
             background-color: #1a73e8;
@@ -53,11 +53,31 @@
             font-weight: bold;
             transition: background-color 0.3s;
         }
-        button:hover {
+        button.search-btn:hover {
             background-color: #1557b0;
         }
+        .quick-search {
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .chip {
+            padding: 6px 12px;
+            background: #e8f0fe;
+            color: #1a73e8;
+            border-radius: 16px;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: background 0.2s;
+            border: 1px solid transparent;
+        }
+        .chip:hover {
+            background: #d2e3fc;
+        }
         #result {
-            margin-top: 30px;
+            margin-top: 20px;
             padding: 20px;
             border-radius: 8px;
             background-color: #f8f9fa;
@@ -67,36 +87,79 @@
             justify-content: center;
             align-items: center;
         }
+        .stock-header {
+            width: 100%;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
         .stock-symbol {
-            font-size: 1.2em;
+            font-size: 1.1em;
             color: #5f6368;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .stock-price {
             font-size: 2.5em;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .stock-change {
             font-size: 1.2em;
         }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+        }
+        .metric-item {
+            background: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+            text-align: left;
+        }
+        .metric-label {
+            font-size: 0.8em;
+            color: #70757a;
+            margin-bottom: 4px;
+        }
+        .metric-value {
+            font-size: 1em;
+            font-weight: bold;
+            color: #202124;
+        }
         .up {
-            color: #ff4d4d; /* 台灣股市：漲為紅 */
+            color: #ff4d4d;
         }
         .down {
-            color: #2ecc71; /* 台灣股市：跌為綠 */
+            color: #2ecc71;
         }
         .no-change {
             color: #333;
+        }
+        .refresh-control {
+            margin-top: 20px;
+            font-size: 0.85em;
+            color: #5f6368;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .timestamp {
+            margin-top: 10px;
+            font-size: 0.75em;
+            color: #9aa0a6;
         }
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #1a73e8;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 24px;
+            height: 24px;
             animation: spin 1s linear infinite;
-            margin: 20px auto;
+            margin: 10px auto;
             display: none;
         }
         @keyframes spin {
@@ -119,29 +182,70 @@
 <body>
     <div class="container">
         <h1>即時股價查詢</h1>
+
         <div class="search-box">
             <input type="text" id="symbol" placeholder="輸入代號 (如 2330.TW)" onkeydown="if(event.key==='Enter') getStockPrice()">
-            <button onclick="getStockPrice()">查詢</button>
+            <button class="search-btn" onclick="getStockPrice()">查詢</button>
         </div>
+
+        <div class="quick-search">
+            <div class="chip" onclick="quickSearch('2330.TW')">台積電</div>
+            <div class="chip" onclick="quickSearch('AAPL')">Apple</div>
+            <div class="chip" onclick="quickSearch('NVDA')">NVIDIA</div>
+            <div class="chip" onclick="quickSearch('2454.TW')">聯發科</div>
+        </div>
+
         <div id="loader" class="loader"></div>
+
         <div id="result">
-            <div style="color: #5f6368;">請輸入股票代號並點擊查詢</div>
+            <div style="color: #5f6368;">請輸入股票代號或點選快速查詢</div>
         </div>
+
+        <div class="refresh-control">
+            <input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()">
+            <label for="auto-refresh">每 30 秒自動更新</label>
+        </div>
+
+        <div id="timestamp" class="timestamp"></div>
     </div>
 
     <script>
+        let refreshInterval = null;
+        let lastSymbol = '';
+
+        function quickSearch(symbol) {
+            document.getElementById('symbol').value = symbol;
+            getStockPrice();
+        }
+
+        function toggleAutoRefresh() {
+            const isEnabled = document.getElementById('auto-refresh').checked;
+            if (isEnabled) {
+                if (lastSymbol) {
+                    refreshInterval = setInterval(getStockPrice, 30000);
+                } else {
+                    document.getElementById('auto-refresh').checked = false;
+                    alert('請先進行一次查詢再開啟自動更新');
+                }
+            } else {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+
         async function getStockPrice() {
             const symbolInput = document.getElementById('symbol');
             const symbol = symbolInput.value.trim().toUpperCase();
             const resultDiv = document.getElementById('result');
             const loader = document.getElementById('loader');
+            const timestampDiv = document.getElementById('timestamp');
 
             if (!symbol) {
                 resultDiv.textContent = '請輸入股票代號';
                 return;
             }
 
-            resultDiv.textContent = '';
+            lastSymbol = symbol;
             loader.style.display = 'block';
 
             try {
@@ -149,39 +253,20 @@
                 const data = await response.json();
 
                 if (!response.ok) {
+                    resultDiv.innerHTML = ''; // Clear but use textContent for dynamic parts
                     const errorMsg = document.createElement('div');
                     errorMsg.textContent = data.detail || `發生錯誤，狀態碼：${response.status}`;
                     resultDiv.appendChild(errorMsg);
-                } else {
-                    const symbolEl = document.createElement('div');
-                    symbolEl.className = 'stock-symbol';
-                    symbolEl.textContent = data.symbol;
 
-                    const priceEl = document.createElement('div');
-                    priceEl.className = 'stock-price';
-                    priceEl.textContent = data.price.toLocaleString();
-
-                    const changeEl = document.createElement('div');
-                    changeEl.className = 'stock-change';
-                    const sign = data.change > 0 ? '+' : '';
-                    changeEl.textContent = `${sign}${data.change} (${sign}${data.percent_change}%)`;
-
-                    if (data.change > 0) {
-                        priceEl.classList.add('up');
-                        changeEl.classList.add('up');
-                        changeEl.textContent = '▲ ' + changeEl.textContent;
-                    } else if (data.change < 0) {
-                        priceEl.classList.add('down');
-                        changeEl.classList.add('down');
-                        changeEl.textContent = '▼ ' + changeEl.textContent;
-                    } else {
-                        priceEl.classList.add('no-change');
-                        changeEl.classList.add('no-change');
+                    // If error, stop auto refresh
+                    if (refreshInterval) {
+                        document.getElementById('auto-refresh').checked = false;
+                        toggleAutoRefresh();
                     }
-
-                    resultDiv.appendChild(symbolEl);
-                    resultDiv.appendChild(priceEl);
-                    resultDiv.appendChild(changeEl);
+                } else {
+                    renderResult(data);
+                    const now = new Date();
+                    timestampDiv.textContent = '最後更新時間：' + now.toLocaleTimeString();
                 }
             } catch (error) {
                 console.error('查詢時發生錯誤:', error);
@@ -189,6 +274,74 @@
             } finally {
                 loader.style.display = 'none';
             }
+        }
+
+        function renderResult(data) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = '';
+
+            const header = document.createElement('div');
+            header.className = 'stock-header';
+
+            const symbolEl = document.createElement('div');
+            symbolEl.className = 'stock-symbol';
+            symbolEl.textContent = data.symbol;
+
+            const priceEl = document.createElement('div');
+            priceEl.className = 'stock-price';
+            priceEl.textContent = data.price.toLocaleString(undefined, {minimumFractionDigits: 2});
+
+            const changeEl = document.createElement('div');
+            changeEl.className = 'stock-change';
+            const sign = data.change > 0 ? '+' : '';
+            changeEl.textContent = `${sign}${data.change.toFixed(2)} (${sign}${data.percent_change.toFixed(2)}%)`;
+
+            if (data.change > 0) {
+                priceEl.classList.add('up');
+                changeEl.classList.add('up');
+                changeEl.textContent = '▲ ' + changeEl.textContent;
+            } else if (data.change < 0) {
+                priceEl.classList.add('down');
+                changeEl.classList.add('down');
+                changeEl.textContent = '▼ ' + changeEl.textContent;
+            } else {
+                priceEl.classList.add('no-change');
+                changeEl.classList.add('no-change');
+            }
+
+            header.appendChild(symbolEl);
+            header.appendChild(priceEl);
+            header.appendChild(changeEl);
+            resultDiv.appendChild(header);
+
+            const grid = document.createElement('div');
+            grid.className = 'metrics-grid';
+
+            const metrics = [
+                { label: '開盤', value: data.open.toFixed(2) },
+                { label: '最高', value: data.high.toFixed(2) },
+                { label: '最低', value: data.low.toFixed(2) },
+                { label: '成交量', value: data.volume.toLocaleString() }
+            ];
+
+            metrics.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'metric-item';
+
+                const label = document.createElement('div');
+                label.className = 'metric-label';
+                label.textContent = m.label;
+
+                const value = document.createElement('div');
+                value.className = 'metric-value';
+                value.textContent = m.value;
+
+                item.appendChild(label);
+                item.appendChild(value);
+                grid.appendChild(item);
+            });
+
+            resultDiv.appendChild(grid);
         }
     </script>
 </body>
